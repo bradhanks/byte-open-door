@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Prototype of the Byte recipient page with an instrumentation overlay, built by Brad Hanks for the Digital Harbor Business Media growth exercise.">
+<meta name="robots" content="noindex">
+<title>Byte Open Door</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a prototype bench. The recipient page sits in a bordered frame at the top; the live event log and the instrumentation plan sit beneath it in two columns that stack on phones. */
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --surface-2:#EBEFF2; --fg:#17212B; --muted:#5C6B78; --line:#D5DCE2;
+  --accent:#0E7C73; --accent-soft:rgba(14,124,115,.10); --accent-fg:#FFFFFF;
+  --ask:#B4540A; --ask-soft:rgba(180,84,10,.10);
+  --instr:#6B3FD1; --instr-soft:rgba(107,63,209,.09);
+  --video:#1B2430; --video-fg:#DCE4EC;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1418; --surface:#161D23; --surface-2:#1F2830; --fg:#E6EBEF; --muted:#9AA6B2; --line:#2B353E;
+    --accent:#3BC4B4; --accent-soft:rgba(59,196,180,.14); --accent-fg:#0B1512;
+    --ask:#F0A04B; --ask-soft:rgba(240,160,75,.14);
+    --instr:#B39DFF; --instr-soft:rgba(179,157,255,.12);
+    --video:#0B1016; --video-fg:#C9D3DD;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1418; --surface:#161D23; --surface-2:#1F2830; --fg:#E6EBEF; --muted:#9AA6B2; --line:#2B353E;
+  --accent:#3BC4B4; --accent-soft:rgba(59,196,180,.14); --accent-fg:#0B1512;
+  --ask:#F0A04B; --ask-soft:rgba(240,160,75,.14);
+  --instr:#B39DFF; --instr-soft:rgba(179,157,255,.12);
+  --video:#0B1016; --video-fg:#C9D3DD;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.5;padding-block:28px 56px;padding-inline:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin-inline:auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:clamp(22px,3vw,30px);font-weight:600}
+h2{font-size:18px;font-weight:600}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted);max-width:70ch;margin-top:6px}
+.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;flex-wrap:wrap}
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.switch input{width:36px;height:20px;appearance:none;-webkit-appearance:none;background:var(--line);border-radius:999px;position:relative;margin:0;cursor:pointer;transition:background .2s;flex:none}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked{background:var(--instr)}
+.switch input:checked::after{transform:translateX(16px)}
+.seg{display:inline-flex;align-items:center;gap:8px;font-size:14px}
+select{font:inherit;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.btn{font:inherit;font-size:14px;font-weight:500;border-radius:8px;padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;display:inline-flex;align-items:center;gap:8px;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.ask{border-color:var(--ask);color:var(--ask);background:var(--ask-soft)}
+.btn.ghost{background:transparent}
+.btn.small{font-size:13px;padding:6px 10px}
+.btn:disabled{opacity:.55;cursor:default}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.rail button:focus-visible,.play:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.frame{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.url{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+.dots{display:inline-flex;gap:5px}.dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
+.chip{font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+.viewer{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.stage{padding:18px;border-right:1px solid var(--line);min-width:0;display:flex;flex-direction:column;gap:14px}
+.panel{padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (max-width:880px){.viewer{grid-template-columns:minmax(0,1fr)}.stage{border-right:0;border-bottom:1px solid var(--line)}}
+.byte-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:600;flex:none}
+.byte-title{font-weight:600}.byte-meta{font-size:13px;color:var(--muted)}
+.video{position:relative;background:var(--video);color:var(--video-fg);border-radius:10px;aspect-ratio:16/9;max-width:100%;overflow:hidden;display:grid;place-items:center}
+.slide{position:absolute;inset:8% 10%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4% 5%;display:flex;flex-direction:column;gap:5%}
+.slide-h{font-weight:600;font-size:clamp(11px,1.6vw,16px)}
+.slide-stats{display:flex;gap:4%}
+.slide-stats div{flex:1;background:rgba(255,255,255,.08);border-radius:4px;padding:3% 4%;font-size:clamp(9px,1.2vw,12px);line-height:1.2}
+.slide-stats b{display:block;font-size:clamp(13px,2.2vw,22px);font-weight:600}
+.slide-lines{display:flex;flex-direction:column;gap:6%}
+.slide-lines i{display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.14);width:80%}
+.slide-lines i:nth-child(2){width:62%}.slide-lines i:nth-child(3){width:70%}
+.slide-box{margin-top:auto;border:2px solid #E05A4E;border-radius:4px;padding:2% 3%;font-size:clamp(9px,1.3vw,13px);position:relative}
+.pin{position:absolute;right:-6px;top:-12px;background:var(--ask);color:#fff;font-family:var(--font-mono);font-size:10px;padding:1px 6px;border-radius:999px}
+.play{position:relative;z-index:2;width:58px;height:58px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#1B2430;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+.play svg{width:24px;height:24px;fill:currentColor}
+.caption{position:absolute;left:12px;bottom:12px;z-index:2;background:rgba(0,0,0,.62);color:#fff;font-size:12.5px;padding:6px 10px;border-radius:6px;max-width:80%}
+.timeline{display:flex;flex-direction:column;gap:6px}
+.track{position:relative;height:6px;background:var(--surface-2);border-radius:3px;margin-top:6px}
+.bar{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:3px;width:0}
+.mark{position:absolute;top:-4px;width:3px;height:14px;border-radius:2px;background:var(--muted);transform:translateX(-50%)}
+.mark.q{background:var(--ask)}
+.mark.mine{background:var(--ask);height:18px;top:-6px;width:4px}
+.time{font-family:var(--font-mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.rail{display:inline-flex;gap:6px}
+.rail button{font-size:18px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer;line-height:1}
+.note{font-size:13px;color:var(--muted)}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.card-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600}
+.who{font-weight:400;font-size:12.5px;color:var(--muted)}
+.counts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.counts div{background:var(--surface-2);border-radius:8px;padding:8px 4px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.2}
+.counts b{display:block;font-size:20px;color:var(--fg);font-variant-numeric:tabular-nums;font-weight:600}
+@media (max-width:420px){.counts{grid-template-columns:repeat(3,1fr)}}
+.you{font-size:13px;color:var(--accent);font-weight:500}
+.msg{font-size:14px;padding:10px;border-radius:8px;background:var(--surface-2)}
+.msg .at{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);margin-left:6px}
+.msg.mine{border-left:3px solid var(--ask)}
+.msg.reply{border-left:3px solid var(--accent)}
+.mini{margin-top:8px;height:52px;border-radius:6px;background:var(--video);color:var(--video-fg);display:flex;align-items:center;gap:10px;padding:0 12px;font-size:12.5px}
+.mini svg{width:18px;height:18px;fill:currentColor;flex:none}
+.promo{border:1px dashed var(--accent);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.closed{font-size:13.5px;background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.composer{display:flex;flex-direction:column;gap:8px;border:1px solid var(--ask);border-radius:10px;padding:12px;background:var(--ask-soft)}
+textarea,input{font:inherit;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.sheet{position:absolute;inset:0;z-index:5;background:rgba(10,14,18,.45);display:grid;place-items:center;padding:16px}
+.sheet .card{max-width:380px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.hint{font-size:13px;color:var(--muted)}
+.toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:8px;font-size:13.5px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.tag.instr{display:none;font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--instr);background:var(--instr-soft);border:1px dashed var(--instr);border-radius:999px;padding:2px 8px;white-space:nowrap;align-items:center;gap:6px;line-height:1.5}
+.tag.instr::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--instr);flex:none}
+body.instr-on .tag.instr{display:inline-flex}
+.legend{display:none;font-size:13px;color:var(--instr);padding:8px 12px;border:1px dashed var(--instr);border-radius:8px;background:var(--instr-soft)}
+body.instr-on .legend{display:block}
+
+.bench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:start}
+@media (max-width:900px){.bench{grid-template-columns:minmax(0,1fr)}}
+.bench-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.log{display:flex;flex-direction:column;max-height:560px;overflow:auto;font-family:var(--font-mono);font-size:12px}
+.ev{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.ev .t{color:var(--muted)}
+.ev .name{font-weight:500}
+.ev .side{font-size:10.5px;padding:1px 6px;border-radius:999px;margin-left:6px;background:var(--surface-2);color:var(--muted);font-weight:400}
+.ev .side.side-sender{background:var(--accent-soft);color:var(--accent)}
+.ev .props{color:var(--muted);word-break:break-word;margin-top:2px}
+.empty{font-size:13px;color:var(--muted);padding:12px 0}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500;white-space:nowrap}
+td.mono,code{font-family:var(--font-mono);font-size:12px}
+.formula{font-family:var(--font-mono);font-size:14px;background:var(--surface-2);border-radius:8px;padding:10px 12px;overflow-x:auto}
+.plan{display:flex;flex-direction:column;gap:16px}
+.plan p{max-width:70ch}
+.fallback{position:absolute;left:-9999px;top:0;width:1px;height:1px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Prototype · Experiments 1 and 2 · built for the Business Media growth exercise</div>
+      <h1>The recipient page, as it should be</h1>
+      <p class="lede">What a person sees when a Byte link lands in their inbox: no login, two actions, and a reason to say who they are. Click through it. Turn on instrumentation to see which event fires where. Built by Brad Hanks, October 2026. Every count on this page is an example.</p>
+    </div>
+    <div class="controls">
+      <label class="switch"><input type="checkbox" id="instrToggle"> <span>Show instrumentation</span></label>
+      <label class="seg" for="variant">Variant <select id="variant"><option value="professional">B · professional</option><option value="emoji">A · emoji rail</option></select></label>
+      <button type="button" class="btn ghost" id="reset">Reset</button>
+    </div>
+  </header>
+
+  <div class="legend">Violet tags mark the event that fires at that element. Names match the schema in the plan below.</div>
+
+  <section class="frame" aria-label="Recipient page prototype">
+    <div class="url"><span class="dots"><i></i><i></i><i></i></span><span>set.digitalharbor.us/b/mac-onboarding-plan</span><span class="chip">No account needed</span><span class="tag instr">byte_opened · on load</span></div>
+    <div class="viewer">
+      <div class="stage">
+        <div class="byte-head">
+          <div class="avatar" aria-hidden="true">J</div>
+          <div><div class="byte-title">Mac onboarding: corrective action plan</div><div class="byte-meta">Jordan, IT Ops · sent to 14 people · 4:52</div></div>
+        </div>
+
+        <div class="video" id="video">
+          <div class="slide" aria-hidden="true">
+            <div class="slide-h">Findings &amp; Corrective Action Plan</div>
+            <div class="slide-stats"><div><b>15</b>new hires, 1.5 months</div><div><b>6</b>on Mac</div><div><b>3+ days</b>to productive</div></div>
+            <div class="slide-lines"><i></i><i></i><i></i></div>
+            <div class="slide-box">Proposed plan: a 3-day SLA for every new device<span class="pin" id="pin" hidden>2:31</span></div>
+          </div>
+          <button type="button" class="play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="playIcon" d="M8 5v14l11-7z"/></svg></button>
+          <div class="caption" id="caption" hidden>Priya · 1:08 · Does this apply to contractors too?</div>
+        </div>
+
+        <div class="timeline">
+          <div class="track" aria-hidden="true">
+            <div class="bar" id="bar"></div>
+            <span class="mark" style="left:13.7%" title="Chapter: what we learned"></span>
+            <span class="mark q" style="left:23.3%" title="Priya asked at 1:08"></span>
+            <span class="mark" style="left:65%" title="Chapter: proposed plan"></span>
+            <span class="mark mine" id="myMark" hidden></span>
+          </div>
+          <div class="time"><span id="time">0:00 / 4:52</span><span class="tag instr">byte_watched · at 25, 50, 75, 100%</span></div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="gotBtn">Got it</button>
+          <div class="rail" id="rail" hidden aria-label="React">
+            <button type="button" data-emoji="👍" aria-label="Thumbs up">👍</button>
+            <button type="button" data-emoji="❤️" aria-label="Heart">❤️</button>
+            <button type="button" data-emoji="👏" aria-label="Clap">👏</button>
+          </div>
+          <button type="button" class="btn ask" id="askBtn">Question at <span id="askAt">0:00</span></button>
+          <span class="tag instr" id="ackTag">ack_submitted · variant B</span>
+          <span class="tag instr">question_submitted</span>
+        </div>
+        <p class="note" id="actionNote">Acknowledging tells Jordan it landed. A question is pinned to the moment you asked it, and Jordan can answer with a video.</p>
+
+        <div class="composer" id="composer" hidden>
+          <label class="field" for="qText">Ask Jordan at <span id="qAt">0:00</span></label>
+          <textarea id="qText" rows="2" placeholder="Does the 3-day SLA apply to contractors?"></textarea>
+          <div class="row"><button type="button" class="btn ask" id="qSend">Send question</button><button type="button" class="btn ghost" id="qCancel">Cancel</button></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div class="card">
+          <div class="card-h">The receipt <span class="who">what Jordan sees · example counts</span><span class="tag instr">digest_sent · 24h and 72h</span></div>
+          <div class="counts">
+            <div><b id="cSent">14</b>sent</div>
+            <div><b id="cWatched">9</b>watched</div>
+            <div><b id="cAcked">6</b>acknowledged</div>
+            <div><b id="cAsked">2</b>asked</div>
+            <div><b id="cSilent">5</b>silent</div>
+          </div>
+          <div class="you" id="youRow" hidden>You: <span id="youStatus"></span></div>
+          <div class="row"><button type="button" class="btn ghost small" id="nudge">Nudge the silent (<span id="nudgeN">5</span>)</button><span class="tag instr">nudge_sent</span></div>
+          <div class="hint" id="nudged" hidden>Catch-Me-Up sent to <span id="nudgedN">5</span> people. In the product this is one click in the 24-hour digest email.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">Thread<span class="tag instr">reply_byte_created · reply_viewed</span></div>
+          <div class="msg"><b>Priya</b><span class="at">1:08</span><div>Does this apply to contractors too?</div></div>
+          <div class="msg mine" id="myQ" hidden><b id="myName">You</b><span class="at" id="myAt">2:31</span><div id="myText"></div></div>
+          <div class="row" id="simRow" hidden><button type="button" class="btn ghost small" id="simReply">Sender side · simulate: Jordan answers with a Byte</button></div>
+          <div class="msg reply" id="reply" hidden><b>Jordan</b> answered with a Byte<span class="at" id="replyAt">at 2:31 · 0:41</span><div class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Jordan's reply, pinned to your question</div></div>
+          <div class="promo" id="prompt" hidden><span>Explaining something to a group? <span class="tag instr">creator_first_byte · trigger: reply</span></span><button type="button" class="btn primary" id="makeByte">Make a Byte</button></div>
+          <div class="closed" id="closed" hidden>Loop closed. This viewer is now a sender. In the product this opens DOT or in-browser recording, and the next Byte they send starts the loop over with a new group.</div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="sheet" id="sheet" hidden>
+      <form class="card" id="idForm" novalidate>
+        <span class="tag instr">viewer_identified · on submit · method: <span id="methodTag">ack</span></span>
+        <h3 id="sheetTitle">Tell Jordan it landed</h3>
+        <p class="hint" id="sheetHint">Your name goes on the receipt. No password. If Jordan replies, you get a link by email.</p>
+        <label class="field" for="idName">Name<input id="idName" autocomplete="name" required></label>
+        <label class="field" for="idEmail">Work email<input id="idEmail" type="email" autocomplete="email" required></label>
+        <p class="hint" id="idError" hidden></p>
+        <div class="row"><button type="submit" class="btn primary" id="idSubmit">Send acknowledgment</button><button type="button" class="btn ghost" id="idCancel">Cancel</button></div>
+      </form>
+    </div>
+    <div class="toast" id="toast" hidden></div>
+  </section>
+
+  <section class="bench">
+    <div class="card">
+      <div class="bench-h"><h2>Event log</h2><button type="button" class="btn ghost small" id="copyLog">Copy as JSON lines</button></div>
+      <p class="note">Fires as you click. In the product these go to the warehouse with the properties shown; viewer-side and sender-side events are marked.</p>
+      <div class="log" id="log"></div>
+      <textarea class="fallback" id="logText" aria-hidden="true" tabindex="-1"></textarea>
+    </div>
+
+    <div class="card plan">
+      <h2>Instrumentation plan</h2>
+      <p>Thirteen events, five numbers on the dashboard, one formula. The viewer gets a first-party token on first open; when they identify, every earlier event with that token is attributed to their user id.</p>
+
+      <h3>Five numbers, weekly</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Number</th><th>How it is computed</th><th>Experiment</th></tr></thead>
+        <tbody>
+          <tr><td><b>v</b> viewers per Byte</td><td>unique byte_opened per byte_sent</td><td>Baseline, week 1</td></tr>
+          <tr><td><b>i</b> identified rate</td><td>viewer_identified / unique byte_opened</td><td>1</td></tr>
+          <tr><td>Ack rate per rollout</td><td>unique ack_submitted / recipient_count, per Byte, split by variant</td><td>1</td></tr>
+          <tr><td><b>c</b> viewer to creator</td><td>creator_first_byte within 30 days / viewer_identified, by identify-week cohort</td><td>2</td></tr>
+          <tr><td>Sender return</td><td>senders with a byte_sent within 7 days of digest_opened / senders who got a digest</td><td>3</td></tr>
+        </tbody>
+      </table></div>
+      <div class="formula">K = v<sub>m</sub> × i × c &nbsp;&nbsp; where v<sub>m</sub> = unique viewers reached per sender per month</div>
+
+      <h3>Event schema</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Event</th><th>Fires when</th><th>Carries</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">byte_sent</td><td>A sender shares a Byte by link, email, Slack or Teams</td><td class="mono">byte_id, sender_id, account_id, recipient_count, channel</td></tr>
+          <tr><td class="mono">byte_opened</td><td>The viewer page loads, with or without an account</td><td class="mono">byte_id, viewer_token, has_account, referrer</td></tr>
+          <tr><td class="mono">byte_watched</td><td>Playback crosses 25, 50, 75 and 100 percent</td><td class="mono">byte_id, viewer_token, pct_watched, max_position_s</td></tr>
+          <tr><td class="mono">viewer_identified</td><td>First name-and-email submit; viewer_token merges into user_id</td><td class="mono">byte_id, viewer_token, user_id, method</td></tr>
+          <tr><td class="mono">ack_submitted</td><td>Got it in variant B, or any reaction in variant A</td><td class="mono">byte_id, user_id, position_s, variant, reaction</td></tr>
+          <tr><td class="mono">question_submitted</td><td>A question is sent at a timestamp</td><td class="mono">byte_id, user_id, position_s, question_id</td></tr>
+          <tr><td class="mono">digest_sent</td><td>24 and 72 hours after byte_sent</td><td class="mono">byte_id, sender_id, watched, acked, asked, silent, hours_after_send</td></tr>
+          <tr><td class="mono">digest_opened</td><td>The sender opens the digest</td><td class="mono">byte_id, sender_id, hours_after_send</td></tr>
+          <tr><td class="mono">nudge_sent</td><td>The sender clicks Nudge the silent</td><td class="mono">byte_id, sender_id, viewer_ids</td></tr>
+          <tr><td class="mono">reply_byte_created</td><td>The sender answers a question with a Byte</td><td class="mono">parent_byte_id, sender_id, question_id, method</td></tr>
+          <tr><td class="mono">reply_viewed</td><td>The asker sees the reply at their timestamp</td><td class="mono">parent_byte_id, user_id, question_id</td></tr>
+          <tr><td class="mono">creator_first_byte</td><td>A user sends their first Byte</td><td class="mono">user_id, days_since_identified, trigger</td></tr>
+          <tr><td class="mono">creator_second_byte</td><td>The same user sends a second one</td><td class="mono">user_id, days_since_first</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">method on viewer_identified is ack, question or reaction. variant is professional or emoji. trigger on creator_first_byte is reply, prompt or explorer, which tells us which door people come through.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var DURATION = 292;
+  var BYTE_ID = 'b_mac_onb_0912';
+  var TOKEN = 'vt_8f3a21';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var timer = null, toastTimer = null, st;
+
+  function fmt(s){ s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function clock(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+
+  function init(){
+    return { identified:false, name:'', email:'', userId:null, acked:false, ackAt:0, asked:false, askAt:0, askText:'',
+      replied:false, created:false, pos:0, playing:false, w25:false, w50:false, w75:false, w100:false,
+      counts:{sent:14, watched:9, acked:6, asked:2, silent:5}, nudged:false, pending:null, log:[], variant:'professional' };
+  }
+
+  function log(name, props, side){
+    st.log.unshift({ t:new Date(), name:name, props:props, side: side || 'viewer' });
+    if (st.log.length > 60) st.log.length = 60;
+    renderLog();
+  }
+
+  function renderLog(){
+    var box = $('#log');
+    box.textContent = '';
+    if (!st.log.length){ var e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Nothing yet.'; box.appendChild(e); return; }
+    st.log.forEach(function(ev){
+      var row = document.createElement('div'); row.className = 'ev';
+      var t = document.createElement('span'); t.className = 't'; t.textContent = clock(ev.t);
+      var body = document.createElement('div');
+      var name = document.createElement('span'); name.className = 'name'; name.textContent = ev.name;
+      var side = document.createElement('span'); side.className = 'side side-' + ev.side; side.textContent = ev.side;
+      var props = document.createElement('div'); props.className = 'props'; props.textContent = JSON.stringify(ev.props);
+      body.appendChild(name); body.appendChild(side); body.appendChild(props);
+      row.appendChild(t); row.appendChild(body); box.appendChild(row);
+    });
+  }
+
+  function toast(msg){
+    var el = $('#toast'); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 3800);
+  }
+
+  function render(){
+    $('#time').textContent = fmt(st.pos) + ' / ' + fmt(DURATION);
+    $('#bar').style.width = (st.pos / DURATION * 100) + '%';
+    $('#askAt').textContent = fmt(st.pos);
+    $('#qAt').textContent = fmt(st.pos);
+    $('#playIcon').setAttribute('d', st.playing ? 'M6 5h4v14H6zM14 5h4v14h-4z' : 'M8 5v14l11-7z');
+    $('#play').setAttribute('aria-label', st.playing ? 'Pause' : 'Play');
+
+    var emoji = st.variant === 'emoji';
+    $('#rail').hidden = !emoji || st.acked;
+    $('#gotBtn').hidden = emoji && !st.acked;
+    $('#gotBtn').disabled = st.acked;
+    $('#gotBtn').textContent = st.acked ? 'Acknowledged at ' + fmt(st.ackAt) : 'Got it';
+    $('#ackTag').textContent = 'ack_submitted · variant ' + (emoji ? 'A' : 'B');
+    $('#askBtn').disabled = st.asked;
+    $('#actionNote').textContent = st.acked
+      ? 'Jordan now has your acknowledgment on the receipt, with the time you gave it.'
+      : (emoji ? 'In variant A any reaction counts as an acknowledgment. The test is whether compliance accounts acknowledge more or less than with the plain button.'
+               : 'Acknowledging tells Jordan it landed. A question is pinned to the moment you asked it, and Jordan can answer with a video.');
+
+    var c = st.counts;
+    $('#cSent').textContent = c.sent; $('#cWatched').textContent = c.watched; $('#cAcked').textContent = c.acked;
+    $('#cAsked').textContent = c.asked; $('#cSilent').textContent = c.silent;
+    $('#nudgeN').textContent = c.silent; $('#nudgedN').textContent = c.silent;
+    $('#nudge').disabled = st.nudged || c.silent === 0;
+    $('#nudge').hidden = st.nudged;
+    $('#nudged').hidden = !st.nudged;
+    $('#youRow').hidden = !st.identified;
+    var parts = [];
+    if (st.acked) parts.push('acknowledged at ' + fmt(st.ackAt));
+    if (st.asked) parts.push('asked at ' + fmt(st.askAt));
+    if (!parts.length) parts.push('identified, no action yet');
+    $('#youStatus').textContent = (st.name ? st.name + ', ' : '') + parts.join(', ');
+
+    $('#myQ').hidden = !st.asked;
+    $('#myName').textContent = st.name || 'You';
+    $('#myAt').textContent = fmt(st.askAt);
+    $('#myText').textContent = st.askText;
+    $('#myMark').hidden = !st.asked;
+    $('#myMark').style.left = (st.askAt / DURATION * 100) + '%';
+    $('#pin').hidden = !st.asked; $('#pin').textContent = fmt(st.askAt);
+    $('#simRow').hidden = !st.asked || st.replied;
+    $('#reply').hidden = !st.replied;
+    $('#replyAt').textContent = 'at ' + fmt(st.askAt) + ' · 0:41';
+    $('#prompt').hidden = !st.replied || st.created;
+    $('#closed').hidden = !st.created;
+  }
+
+  function openSheet(method){
+    st.pending = method;
+    $('#methodTag').textContent = method;
+    $('#sheetTitle').textContent = method === 'ack' ? 'Tell Jordan it landed' : 'Ask Jordan at ' + fmt(st.askAt);
+    $('#sheetHint').textContent = method === 'ack'
+      ? 'Your name goes on the receipt. No password. If Jordan replies, you get a link by email.'
+      : 'Your question is pinned to ' + fmt(st.askAt) + '. No password. When Jordan answers, you get a link by email.';
+    $('#idSubmit').textContent = method === 'ack' ? 'Send acknowledgment' : 'Send question';
+    $('#idError').hidden = true;
+    $('#sheet').hidden = false;
+    setTimeout(function(){ $('#idName').focus(); }, 0);
+  }
+  function closeSheet(){ $('#sheet').hidden = true; st.pending = null; }
+
+  function identify(){
+    st.identified = true;
+    st.userId = 'u_' + st.email.toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,18);
+    log('viewer_identified', { byte_id:BYTE_ID, viewer_token:TOKEN, user_id:st.userId, method:st.pending });
+    st.counts.watched += 1; st.counts.silent = Math.max(0, st.counts.silent - 1);
+  }
+
+  function doAck(reaction){
+    st.acked = true; st.ackAt = st.pos;
+    var props = { byte_id:BYTE_ID, user_id:st.userId, position_s:Math.round(st.pos), variant:st.variant };
+    if (reaction) props.reaction = reaction;
+    log('ack_submitted', props);
+    st.counts.acked += 1;
+    toast('Acknowledged at ' + fmt(st.ackAt) + '. Jordan sees it on the receipt.');
+    render();
+  }
+
+  function doAsk(){
+    st.asked = true;
+    log('question_submitted', { byte_id:BYTE_ID, user_id:st.userId, position_s:Math.round(st.askAt), question_id:'q_01' });
+    st.counts.asked += 1;
+    $('#composer').hidden = true;
+    toast('Question pinned at ' + fmt(st.askAt) + '. Jordan gets it in the 24-hour digest.');
+    render();
+  }
+
+  function watchedMark(flag, pct){
+    if (!st[flag]){ st[flag] = true; log('byte_watched', { byte_id:BYTE_ID, viewer_token:TOKEN, pct_watched:pct, max_position_s:Math.round(st.pos) }); }
+  }
+  function finish(){
+    st.pos = DURATION; st.playing = false; clearInterval(timer); timer = null;
+    watchedMark('w25',25); watchedMark('w50',50); watchedMark('w75',75); watchedMark('w100',100);
+    $('#caption').hidden = true; render();
+  }
+  function tick(){
+    st.pos += DURATION / 80;
+    $('#caption').hidden = !(st.pos >= 68 && st.pos < 110);
+    if (st.pos >= DURATION * .25) watchedMark('w25',25);
+    if (st.pos >= DURATION * .5) watchedMark('w50',50);
+    if (st.pos >= DURATION * .75) watchedMark('w75',75);
+    if (st.pos >= DURATION){ finish(); return; }
+    render();
+  }
+
+  $('#play').addEventListener('click', function(){
+    if (st.playing){ st.playing = false; clearInterval(timer); timer = null; render(); return; }
+    if (st.pos >= DURATION) st.pos = 0;
+    st.playing = true; render();
+    if (reduced){ finish(); return; }
+    timer = setInterval(tick, 100);
+  });
+
+  $('#gotBtn').addEventListener('click', function(){ if (st.acked) return; if (!st.identified) openSheet('ack'); else doAck(); });
+  Array.prototype.forEach.call(document.querySelectorAll('#rail button'), function(b){
+    b.addEventListener('click', function(){ if (st.acked) return; st.pendingReaction = b.getAttribute('data-emoji'); if (!st.identified) openSheet('ack'); else doAck(st.pendingReaction); });
+  });
+  $('#askBtn').addEventListener('click', function(){
+    if (st.asked) return;
+    st.askAt = st.pos; $('#qAt').textContent = fmt(st.askAt);
+    $('#composer').hidden = false; $('#qText').focus();
+  });
+  $('#qCancel').addEventListener('click', function(){ $('#composer').hidden = true; });
+  $('#qSend').addEventListener('click', function(){
+    st.askText = $('#qText').value.trim() || $('#qText').placeholder;
+    if (!st.identified) openSheet('question'); else doAsk();
+  });
+
+  $('#idCancel').addEventListener('click', closeSheet);
+  $('#sheet').addEventListener('keydown', function(e){ if (e.key === 'Escape') closeSheet(); });
+  $('#idForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = $('#idName').value.trim(), email = $('#idEmail').value.trim();
+    if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('#idError').textContent = 'A name and a working email are the whole form.'; $('#idError').hidden = false; return; }
+    st.name = name; st.email = email;
+    var method = st.pending; identify(); closeSheet();
+    if (method === 'ack') doAck(st.variant === 'emoji' ? st.pendingReaction : undefined); else doAsk();
+  });
+
+  $('#simReply').addEventListener('click', function(){
+    st.replied = true;
+    log('reply_byte_created', { parent_byte_id:BYTE_ID, sender_id:'u_jordan', question_id:'q_01', method:'browser' }, 'sender');
+    log('reply_viewed', { parent_byte_id:BYTE_ID, user_id:st.userId, question_id:'q_01' });
+    toast('Jordan answered at ' + fmt(st.askAt) + '. This is the moment the prompt appears.');
+    render();
+  });
+  $('#makeByte').addEventListener('click', function(){
+    st.created = true;
+    log('creator_first_byte', { user_id:st.userId, days_since_identified:0, trigger:'reply' });
+    render();
+  });
+  $('#nudge').addEventListener('click', function(){
+    st.nudged = true;
+    var ids = []; for (var i = 1; i <= st.counts.silent; i++) ids.push('vt_s' + pad(i));
+    log('nudge_sent', { byte_id:BYTE_ID, sender_id:'u_jordan', viewer_ids:ids, hours_after_send:24 }, 'sender');
+    render();
+  });
+
+  $('#variant').addEventListener('change', function(){ st.variant = this.value; render(); });
+  $('#instrToggle').addEventListener('change', function(){ document.body.classList.toggle('instr-on', this.checked); });
+
+  $('#copyLog').addEventListener('click', function(){
+    var text = st.log.slice().reverse().map(function(ev){ var o = { ts:ev.t.toISOString(), event:ev.name, side:ev.side }; for (var k in ev.props) o[k] = ev.props[k]; return JSON.stringify(o); }).join('\n');
+    var btn = this;
+    function done(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy as JSON lines'; }, 1600); }
+    function fallback(){ var ta = $('#logText'); ta.value = text; ta.className = ''; ta.style.position = 'static'; ta.style.width = '100%'; ta.style.height = '120px'; ta.setAttribute('aria-hidden','false'); ta.focus(); ta.select(); btn.textContent = 'Select and copy below'; }
+    if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done).catch(fallback); } else { fallback(); }
+  });
+
+  function start(){
+    clearInterval(timer); timer = null;
+    st = init();
+    st.variant = $('#variant').value;
+    $('#sheet').hidden = true; $('#composer').hidden = true; $('#caption').hidden = true; $('#toast').hidden = true;
+    $('#idName').value = ''; $('#idEmail').value = ''; $('#qText').value = '';
+    render(); renderLog();
+    log('byte_opened', { byte_id:BYTE_ID, viewer_token:TOKEN, has_account:false, referrer:'email' });
+  }
+  $('#reset').addEventListener('click', start);
+  start();
+})();
+</script>
+</body>
+</html>
